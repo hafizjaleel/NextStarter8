@@ -53,11 +53,18 @@ const courses = [
   },
 ];
 
+const ITEMS_PER_PAGE = 8;
+
 export default function CoursesPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [level, setLevel] = useState('');
   const [status, setStatus] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(courses.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedCourses = courses.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   return (
     <div className="space-y-6">
