@@ -90,7 +90,7 @@ export function CourseModules() {
   const handleEditModule = (id: number) => {
     const moduleToEdit = modules.find((m) => m.id === id);
     if (moduleToEdit) {
-      setFormData({ title: moduleToEdit.title });
+      setFormData({ title: moduleToEdit.title, moduleOrder: moduleToEdit.moduleOrder.toString() });
       setEditingId(id);
       setIsPanelOpen(true);
     }
