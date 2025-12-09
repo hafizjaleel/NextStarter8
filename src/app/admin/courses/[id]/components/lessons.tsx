@@ -1,9 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Video, FileText, Plus, Edit2, Trash2, Lock, X } from 'lucide-react';
+import { Video, FileText, Plus, Edit2, Trash2, Lock, X, HelpCircle } from 'lucide-react';
+import { QuizForm, type QuizData, type Question } from './quiz-form';
 
-const initialLessons = [
+const initialLessons: Array<{
+  id: number;
+  title: string;
+  type: 'video' | 'pdf' | 'downloadable' | 'quiz';
+  duration: string;
+  module: string;
+  published: boolean;
+  quizData?: QuizData;
+}> = [
   {
     id: 1,
     title: 'Introduction to React',
@@ -23,10 +32,29 @@ const initialLessons = [
   {
     id: 3,
     title: 'React Basics Quiz',
-    type: 'document',
-    duration: '10m',
+    type: 'quiz',
+    duration: '15m',
     module: 'Getting Started with React',
     published: false,
+    quizData: {
+      questions: [
+        {
+          id: 1,
+          text: 'What is React?',
+          type: 'multiple-choice',
+          answers: [
+            { id: 1, text: 'A JavaScript library' },
+            { id: 2, text: 'A programming language' },
+            { id: 3, text: 'A CSS framework' },
+          ],
+          correctAnswers: [1],
+          feedback: 'Correct! React is a JavaScript library for building user interfaces.',
+        },
+      ],
+      passingScore: 70,
+      timeLimit: 15,
+      maxAttempts: 3,
+    },
   },
   {
     id: 4,
@@ -47,6 +75,7 @@ const modules = [
 export function CourseLessons() {
   const [lessons, setLessons] = useState(initialLessons);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedLessonIds, setSelectedLessonIds] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     title: '',
@@ -56,6 +85,12 @@ export function CourseLessons() {
     muxVideo: '',
     pdfFile: null as File | null,
     downloadableFile: null as File | null,
+    quizData: {
+      questions: [],
+      passingScore: 70,
+      timeLimit: 0,
+      maxAttempts: 0,
+    } as QuizData,
   });
 
   const handleInputChange = (
@@ -72,24 +107,71 @@ export function CourseLessons() {
     }
   };
 
+  const handleEditLesson = (id: number) => {
+    const lessonToEdit = lessons.find((l) => l.id === id);
+    if (lessonToEdit) {
+      setFormData({
+        title: lessonToEdit.title,
+        type: lessonToEdit.type,
+        duration: lessonToEdit.duration,
+        module: lessonToEdit.module,
+        muxVideo: lessonToEdit.type === 'video' ? 'existing-video' : '',
+        pdfFile: null,
+        downloadableFile: null,
+        quizData: lessonToEdit.quizData || {
+          questions: [],
+          passingScore: 70,
+          timeLimit: 0,
+          maxAttempts: 0,
+        },
+      });
+      setEditingId(id);
+      setShowForm(true);
+    }
+  };
+
   const handleAddLesson = (e: React.FormEvent) => {
     e.preventDefault();
 
     const hasValidContent =
-      (formData.type === 'video' && formData.muxVideo) ||
-      (formData.type === 'pdf' && formData.pdfFile) ||
-      (formData.type === 'downloadable' && formData.downloadableFile);
+      (formData.type === 'video' && (formData.muxVideo || editingId !== null)) ||
+      (formData.type === 'pdf' && (formData.pdfFile || editingId !== null)) ||
+      (formData.type === 'downloadable' && (formData.downloadableFile || editingId !== null)) ||
+      (formData.type === 'quiz' && formData.quizData.questions.length > 0);
 
     if (formData.title && formData.duration && formData.module && hasValidContent) {
-      const newLesson = {
-        id: Math.max(...lessons.map((l) => l.id), 0) + 1,
-        title: formData.title,
-        type: formData.type as 'video' | 'pdf' | 'downloadable',
-        duration: formData.duration,
-        module: formData.module,
-        published: false,
-      };
-      setLessons([...lessons, newLesson]);
+      if (editingId !== null) {
+        // Update existing lesson
+        setLessons(
+          lessons.map((l) =>
+            l.id === editingId
+              ? {
+                  ...l,
+                  title: formData.title,
+                  type: formData.type as 'video' | 'pdf' | 'downloadable' | 'quiz',
+                  duration: formData.duration,
+                  module: formData.module,
+                  ...(formData.type === 'quiz' && { quizData: formData.quizData }),
+                }
+              : l,
+          ),
+        );
+        setEditingId(null);
+      } else {
+        // Add new lesson
+        const newLesson: any = {
+          id: Math.max(...lessons.map((l) => l.id), 0) + 1,
+          title: formData.title,
+          type: formData.type as 'video' | 'pdf' | 'downloadable' | 'quiz',
+          duration: formData.duration,
+          module: formData.module,
+          published: false,
+        };
+        if (formData.type === 'quiz') {
+          newLesson.quizData = formData.quizData;
+        }
+        setLessons([...lessons, newLesson]);
+      }
       setFormData({
         title: '',
         type: 'video',
@@ -98,6 +180,12 @@ export function CourseLessons() {
         muxVideo: '',
         pdfFile: null,
         downloadableFile: null,
+        quizData: {
+          questions: [],
+          passingScore: 70,
+          timeLimit: 0,
+          maxAttempts: 0,
+        },
       });
       setShowForm(false);
     }
@@ -170,9 +258,29 @@ export function CourseLessons() {
       {showForm && (
         <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900">Add New Lesson</h3>
+            <h3 className="text-base font-bold text-slate-900">
+              {editingId !== null ? 'Edit Lesson' : 'Add New Lesson'}
+            </h3>
             <button
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setShowForm(false);
+                setEditingId(null);
+                setFormData({
+                  title: '',
+                  type: 'video',
+                  duration: '',
+                  module: modules[0],
+                  muxVideo: '',
+                  pdfFile: null,
+                  downloadableFile: null,
+                  quizData: {
+                    questions: [],
+                    passingScore: 70,
+                    timeLimit: 0,
+                    maxAttempts: 0,
+                  },
+                });
+              }}
               className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
             >
               <X className="h-4 w-4" strokeWidth={2} />
@@ -230,6 +338,7 @@ export function CourseLessons() {
                   <option value="video">Video</option>
                   <option value="pdf">PDF</option>
                   <option value="downloadable">Downloadable Content</option>
+                  <option value="quiz">Quiz</option>
                 </select>
               </div>
               <div>
@@ -310,16 +419,43 @@ export function CourseLessons() {
               </div>
             )}
 
+            {formData.type === 'quiz' && (
+              <QuizForm
+                quizData={formData.quizData}
+                onQuizDataChange={(quizData) =>
+                  setFormData((prev) => ({ ...prev, quizData }))
+                }
+              />
+            )}
+
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
                 className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700"
               >
-                Add Lesson
+                {editingId !== null ? 'Update Lesson' : 'Add Lesson'}
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingId(null);
+                  setFormData({
+                    title: '',
+                    type: 'video',
+                    duration: '',
+                    module: modules[0],
+                    muxVideo: '',
+                    pdfFile: null,
+                    downloadableFile: null,
+                    quizData: {
+                      questions: [],
+                      passingScore: 70,
+                      timeLimit: 0,
+                      maxAttempts: 0,
+                    },
+                  });
+                }}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
               >
                 Cancel
@@ -382,10 +518,18 @@ export function CourseLessons() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedLessonIds.includes(lesson.id)}
+                          onChange={() => handleSelectLesson(lesson.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-emerald-600 transition cursor-pointer"
+                        />
                         {lesson.type === 'video' ? (
                           <Video className="h-5 w-5 text-blue-600 flex-shrink-0" strokeWidth={2} />
                         ) : lesson.type === 'pdf' ? (
                           <FileText className="h-5 w-5 text-orange-600 flex-shrink-0" strokeWidth={2} />
+                        ) : lesson.type === 'quiz' ? (
+                          <HelpCircle className="h-5 w-5 text-purple-600 flex-shrink-0" strokeWidth={2} />
                         ) : (
                           <FileText className="h-5 w-5 text-purple-600 flex-shrink-0" strokeWidth={2} />
                         )}
@@ -398,6 +542,20 @@ export function CourseLessons() {
                           </div>
                           <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                             <span>{lesson.duration}</span>
+                            {lesson.type === 'quiz' && lesson.quizData && (
+                              <>
+                                <span>•</span>
+                                <span>{lesson.quizData.questions.length} questions</span>
+                                <span>•</span>
+                                <span>{lesson.quizData.passingScore}% to pass</span>
+                                {lesson.quizData.timeLimit > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{lesson.quizData.timeLimit}m time limit</span>
+                                  </>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -420,7 +578,10 @@ export function CourseLessons() {
                         <span className="text-xs text-slate-500">{lesson.published ? 'Published' : 'Draft'}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                        <button
+                          onClick={() => handleEditLesson(lesson.id)}
+                          className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                        >
                           <Edit2 className="h-4 w-4" strokeWidth={2} />
                         </button>
                         <button

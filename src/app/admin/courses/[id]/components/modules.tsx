@@ -63,6 +63,7 @@ export function CourseModules() {
   const [modules, setModules] = useState(initialModules);
   const [lessons] = useState(initialLessons);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: '',
   });
@@ -74,14 +75,30 @@ export function CourseModules() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleEditModule = (id: number) => {
+    const moduleToEdit = modules.find((m) => m.id === id);
+    if (moduleToEdit) {
+      setFormData({ title: moduleToEdit.title });
+      setEditingId(id);
+      setShowForm(true);
+    }
+  };
+
   const handleAddModule = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.title) {
-      const newModule = {
-        id: Math.max(...modules.map((m) => m.id), 0) + 1,
-        title: formData.title,
-      };
-      setModules([...modules, newModule]);
+      if (editingId !== null) {
+        // Update existing module
+        setModules(modules.map((m) => (m.id === editingId ? { ...m, title: formData.title } : m)));
+        setEditingId(null);
+      } else {
+        // Add new module
+        const newModule = {
+          id: Math.max(...modules.map((m) => m.id), 0) + 1,
+          title: formData.title,
+        };
+        setModules([...modules, newModule]);
+      }
       setFormData({ title: '' });
       setShowForm(false);
     }
@@ -117,9 +134,15 @@ export function CourseModules() {
       {showForm && (
         <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900">Add New Module</h3>
+            <h3 className="text-base font-bold text-slate-900">
+              {editingId !== null ? 'Edit Module' : 'Add New Module'}
+            </h3>
             <button
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setShowForm(false);
+                setEditingId(null);
+                setFormData({ title: '' });
+              }}
               className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
             >
               <X className="h-4 w-4" strokeWidth={2} />
@@ -146,11 +169,15 @@ export function CourseModules() {
                 type="submit"
                 className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700"
               >
-                Add Module
+                {editingId !== null ? 'Update Module' : 'Add Module'}
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingId(null);
+                  setFormData({ title: '' });
+                }}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
               >
                 Cancel
@@ -177,7 +204,10 @@ export function CourseModules() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                  <button
+                    onClick={() => handleEditModule(module.id)}
+                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  >
                     <Edit2 className="h-4 w-4" strokeWidth={2} />
                   </button>
                   <button
