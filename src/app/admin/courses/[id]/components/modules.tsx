@@ -161,34 +161,37 @@ export function CourseModules() {
       )}
 
       <div className="space-y-3">
-        {modules.map((module) => (
-          <div
-            key={module.id}
-            className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h4 className="text-base font-bold text-slate-900">{module.title}</h4>
-                <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
-                  <span>{module.lessons} lessons</span>
-                  <span>{module.duration}</span>
+        {modules.map((module) => {
+          const { lessonCount, duration } = getModuleStats(module.title);
+          return (
+            <div
+              key={module.id}
+              className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h4 className="text-base font-bold text-slate-900">{module.title}</h4>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
+                    <span>{lessonCount} lesson{lessonCount !== 1 ? 's' : ''}</span>
+                    <span>{duration}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                    <Edit2 className="h-4 w-4" strokeWidth={2} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteModule(module.id)}
+                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" strokeWidth={2} />
+                  </button>
+                  <ChevronRight className="h-5 w-5 text-slate-400" strokeWidth={2} />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
-                  <Edit2 className="h-4 w-4" strokeWidth={2} />
-                </button>
-                <button
-                  onClick={() => handleDeleteModule(module.id)}
-                  className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" strokeWidth={2} />
-                </button>
-                <ChevronRight className="h-5 w-5 text-slate-400" strokeWidth={2} />
-              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
