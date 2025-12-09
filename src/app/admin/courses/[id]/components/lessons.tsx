@@ -107,6 +107,46 @@ export function CourseLessons() {
     setLessons(lessons.filter((l) => l.id !== id));
   };
 
+  const handleToggleStatus = (id: number) => {
+    setLessons(
+      lessons.map((lesson) =>
+        lesson.id === id ? { ...lesson, published: !lesson.published } : lesson,
+      ),
+    );
+  };
+
+  const handleSelectLesson = (id: number) => {
+    setSelectedLessonIds((prev) =>
+      prev.includes(id) ? prev.filter((lid) => lid !== id) : [...prev, id],
+    );
+  };
+
+  const handleSelectAllInModule = (moduleName: string) => {
+    const moduleIds = lessons
+      .filter((l) => l.module === moduleName)
+      .map((l) => l.id);
+    const allSelected = moduleIds.every((id) => selectedLessonIds.includes(id));
+
+    if (allSelected) {
+      setSelectedLessonIds((prev) =>
+        prev.filter((id) => !moduleIds.includes(id)),
+      );
+    } else {
+      setSelectedLessonIds((prev) => [...prev, ...moduleIds.filter((id) => !prev.includes(id))]);
+    }
+  };
+
+  const handleBulkStatusChange = (status: boolean) => {
+    setLessons(
+      lessons.map((lesson) =>
+        selectedLessonIds.includes(lesson.id)
+          ? { ...lesson, published: status }
+          : lesson,
+      ),
+    );
+    setSelectedLessonIds([]);
+  };
+
   const groupedLessons = modules.reduce(
     (acc, module) => {
       acc[module] = lessons.filter((l) => l.module === module);
