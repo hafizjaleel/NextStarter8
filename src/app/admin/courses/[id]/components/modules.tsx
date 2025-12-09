@@ -70,6 +70,8 @@ export function CourseModules() {
     isOpen: false,
     id: null,
   });
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: '',
   });
