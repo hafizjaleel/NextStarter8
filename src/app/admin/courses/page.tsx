@@ -108,6 +108,7 @@ export default function CoursesPage() {
         {paginatedCourses.map((course) => (
           <CourseCard
             key={course.id}
+            id={course.id}
             title={course.title}
             description={course.description}
             category={course.category}
