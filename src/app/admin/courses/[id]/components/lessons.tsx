@@ -303,8 +303,10 @@ export function CourseLessons() {
                       <div className="flex items-center gap-3 flex-1">
                         {lesson.type === 'video' ? (
                           <Video className="h-5 w-5 text-blue-600 flex-shrink-0" strokeWidth={2} />
-                        ) : (
+                        ) : lesson.type === 'pdf' ? (
                           <FileText className="h-5 w-5 text-orange-600 flex-shrink-0" strokeWidth={2} />
+                        ) : (
+                          <FileText className="h-5 w-5 text-purple-600 flex-shrink-0" strokeWidth={2} />
                         )}
                         <div>
                           <div className="flex items-center gap-2">
