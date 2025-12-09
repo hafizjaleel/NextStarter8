@@ -73,24 +73,60 @@ export function CourseLessons() {
     }
   };
 
+  const handleEditLesson = (id: number) => {
+    const lessonToEdit = lessons.find((l) => l.id === id);
+    if (lessonToEdit) {
+      setFormData({
+        title: lessonToEdit.title,
+        type: lessonToEdit.type,
+        duration: lessonToEdit.duration,
+        module: lessonToEdit.module,
+        muxVideo: lessonToEdit.type === 'video' ? 'existing-video' : '',
+        pdfFile: null,
+        downloadableFile: null,
+      });
+      setEditingId(id);
+      setShowForm(true);
+    }
+  };
+
   const handleAddLesson = (e: React.FormEvent) => {
     e.preventDefault();
 
     const hasValidContent =
-      (formData.type === 'video' && formData.muxVideo) ||
-      (formData.type === 'pdf' && formData.pdfFile) ||
-      (formData.type === 'downloadable' && formData.downloadableFile);
+      (formData.type === 'video' && (formData.muxVideo || editingId !== null)) ||
+      (formData.type === 'pdf' && (formData.pdfFile || editingId !== null)) ||
+      (formData.type === 'downloadable' && (formData.downloadableFile || editingId !== null));
 
     if (formData.title && formData.duration && formData.module && hasValidContent) {
-      const newLesson = {
-        id: Math.max(...lessons.map((l) => l.id), 0) + 1,
-        title: formData.title,
-        type: formData.type as 'video' | 'pdf' | 'downloadable',
-        duration: formData.duration,
-        module: formData.module,
-        published: false,
-      };
-      setLessons([...lessons, newLesson]);
+      if (editingId !== null) {
+        // Update existing lesson
+        setLessons(
+          lessons.map((l) =>
+            l.id === editingId
+              ? {
+                  ...l,
+                  title: formData.title,
+                  type: formData.type as 'video' | 'pdf' | 'downloadable',
+                  duration: formData.duration,
+                  module: formData.module,
+                }
+              : l,
+          ),
+        );
+        setEditingId(null);
+      } else {
+        // Add new lesson
+        const newLesson = {
+          id: Math.max(...lessons.map((l) => l.id), 0) + 1,
+          title: formData.title,
+          type: formData.type as 'video' | 'pdf' | 'downloadable',
+          duration: formData.duration,
+          module: formData.module,
+          published: false,
+        };
+        setLessons([...lessons, newLesson]);
+      }
       setFormData({
         title: '',
         type: 'video',
