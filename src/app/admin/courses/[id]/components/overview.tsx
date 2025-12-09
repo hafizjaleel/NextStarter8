@@ -303,16 +303,6 @@ export function CourseOverview() {
         </div>
       )}
 
-      {/* Course Preview */}
-      <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-slate-900 mb-4">Course Preview Video</h3>
-        <div className="aspect-video rounded-lg bg-slate-100 flex items-center justify-center border border-dashed border-slate-200">
-          <div className="text-center">
-            <div className="text-4xl text-slate-300 mb-2">▶</div>
-            <p className="text-sm text-slate-500">Preview video (upload placeholder)</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
