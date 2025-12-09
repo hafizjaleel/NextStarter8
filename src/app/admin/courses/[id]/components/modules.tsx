@@ -1,27 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronRight, Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
 import { SidePanel } from '@/components/side-panel';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 
-const initialModules = [
-  {
-    id: 1,
-    title: 'Getting Started with React',
-    moduleOrder: 1,
-  },
-  {
-    id: 2,
-    title: 'React Hooks Deep Dive',
-    moduleOrder: 2,
-  },
-  {
-    id: 3,
-    title: 'State Management',
-    moduleOrder: 3,
-  },
-];
+interface Module {
+  id: number | string;
+  title: string;
+  moduleOrder: number;
+}
+
+interface CourseModulesProps {
+  courseId: string;
+}
 
 const initialLessons = [
   { id: 1, title: 'Introduction to React', duration: '15m', module: 'Getting Started with React' },
