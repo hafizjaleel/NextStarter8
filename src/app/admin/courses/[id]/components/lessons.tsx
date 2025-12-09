@@ -159,64 +159,136 @@ export function CourseLessons({ courseId }: CourseLessonsProps) {
     }
   };
 
-  const handleAddLesson = (e: React.FormEvent) => {
+  const handleAddLesson = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const hasValidContent =
-      (formData.type === 'video' && (formData.muxVideo || editingId !== null)) ||
-      (formData.type === 'pdf' && (formData.pdfFile || editingId !== null)) ||
-      (formData.type === 'downloadable' && (formData.downloadableFile || editingId !== null)) ||
-      (formData.type === 'quiz' && formData.quizData.questions.length > 0);
+    const lessonOrder = parseInt(formData.lessonOrder, 10);
 
-    if (formData.title && formData.duration && formData.module && hasValidContent) {
-      if (editingId !== null) {
-        // Update existing lesson
-        setLessons(
-          lessons.map((l) =>
-            l.id === editingId
-              ? {
-                  ...l,
-                  title: formData.title,
-                  type: formData.type as 'video' | 'pdf' | 'downloadable' | 'quiz',
-                  duration: formData.duration,
-                  module: formData.module,
-                  ...(formData.type === 'quiz' && { quizData: formData.quizData }),
-                }
-              : l,
-          ),
-        );
-        setEditingId(null);
-      } else {
-        // Add new lesson
-        const newLesson: any = {
-          id: Math.max(...lessons.map((l) => l.id), 0) + 1,
+    const hasValidContent =
+      (formData.lessonType === 'video' && formData.muxUrl) ||
+      (formData.lessonType === 'pdf' && formData.uploadedFiles.length > 0) ||
+      (formData.lessonType === 'audio' && formData.uploadedFiles.length > 0) ||
+      (formData.lessonType === 'file' && formData.uploadedFiles.length > 0) ||
+      (formData.lessonType === 'text' && formData.title) ||
+      (formData.lessonType === 'quiz' && formData.quizData.questions.length > 0);
+
+    if (
+      formData.title &&
+      formData.moduleId &&
+      !isNaN(lessonOrder) &&
+      lessonOrder > 0 &&
+      hasValidContent
+    ) {
+      try {
+        const payload: any = {
           title: formData.title,
-          type: formData.type as 'video' | 'pdf' | 'downloadable' | 'quiz',
-          duration: formData.duration,
-          module: formData.module,
-          published: false,
+          moduleId: formData.moduleId,
+          lessonType: formData.lessonType,
+          lessonOrder,
+          fileIds: formData.uploadedFiles.map((f) => f.id),
         };
-        if (formData.type === 'quiz') {
-          newLesson.quizData = formData.quizData;
+
+        if (formData.lessonType === 'video') {
+          payload.muxUrl = formData.muxUrl;
         }
-        setLessons([...lessons, newLesson]);
+
+        if (formData.lessonType === 'quiz') {
+          payload.quizData = formData.quizData;
+        }
+
+        if (editingId !== null) {
+          // Update existing lesson
+          const response = await fetch(`/api/v1/course/lesson/update/${editingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update lesson');
+          }
+
+          setLessons(
+            lessons.map((l) =>
+              l.id === editingId
+                ? {
+                    ...l,
+                    title: formData.title,
+                    lessonType: formData.lessonType,
+                    moduleId: formData.moduleId,
+                    lessonOrder,
+                    files: formData.uploadedFiles,
+                    muxUrl: formData.lessonType === 'video' ? formData.muxUrl : undefined,
+                    ...(formData.lessonType === 'quiz' && { quizData: formData.quizData }),
+                  }
+                : l,
+            ),
+          );
+          setEditingId(null);
+        } else {
+          // Create new lesson
+          const response = await fetch('/api/v1/course/lesson/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...payload,
+              courseId,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to create lesson');
+          }
+
+          const data = await response.json();
+          const newLesson = data.lesson || {
+            id: Math.max(
+              ...lessons.map((l) => (typeof l.id === 'number' ? l.id : 0)),
+              0,
+            ) + 1,
+            title: formData.title,
+            lessonType: formData.lessonType,
+            moduleId: formData.moduleId,
+            lessonOrder,
+            files: formData.uploadedFiles,
+            muxUrl: formData.lessonType === 'video' ? formData.muxUrl : undefined,
+            published: false,
+            ...(formData.lessonType === 'quiz' && { quizData: formData.quizData }),
+          };
+
+          // Reorder existing lessons if needed
+          const updatedLessons = lessons
+            .filter((l) => l.moduleId === formData.moduleId)
+            .map((l) =>
+              l.lessonOrder >= lessonOrder
+                ? { ...l, lessonOrder: l.lessonOrder + 1 }
+                : l,
+            )
+            .concat(
+              lessons.filter((l) => l.moduleId !== formData.moduleId),
+            );
+
+          setLessons([...updatedLessons, newLesson]);
+        }
+
+        setFormData({
+          title: '',
+          lessonType: 'video',
+          moduleId: modules.length > 0 ? modules[0].id : '',
+          lessonOrder: '',
+          muxUrl: '',
+          uploadedFiles: [],
+          quizData: {
+            questions: [],
+            passingScore: 70,
+            timeLimit: 0,
+            maxAttempts: 0,
+          },
+        });
+        setIsPanelOpen(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       }
-      setFormData({
-        title: '',
-        type: 'video',
-        duration: '',
-        module: modules[0],
-        muxVideo: '',
-        pdfFile: null,
-        downloadableFile: null,
-        quizData: {
-          questions: [],
-          passingScore: 70,
-          timeLimit: 0,
-          maxAttempts: 0,
-        },
-      });
-      setIsPanelOpen(false);
     }
   };
 
