@@ -1,4 +1,7 @@
+import Link from 'next/link';
+
 interface CourseCardProps {
+  id: number | string;
   title: string;
   description?: string;
   category?: string;
@@ -10,6 +13,7 @@ interface CourseCardProps {
 }
 
 export function CourseCard({
+  id,
   title,
   description,
   category,
@@ -20,7 +24,8 @@ export function CourseCard({
   updated,
 }: CourseCardProps) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+    <Link href={`/admin/courses/${id}`}>
+      <div className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
       {/* Thumbnail */}
       <div className="aspect-video overflow-hidden rounded-t-2xl bg-gradient-to-br from-slate-100 to-slate-200" />
 
@@ -77,5 +82,6 @@ export function CourseCard({
         </div>
       </div>
     </div>
+    </Link>
   );
 }
