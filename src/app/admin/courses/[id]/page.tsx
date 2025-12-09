@@ -22,7 +22,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     {
       label: 'Overview',
       value: 'overview',
-      content: <CourseOverview />,
+      content: <CourseOverview courseId={id} />,
     },
     {
       label: 'Modules',

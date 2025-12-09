@@ -4,9 +4,11 @@ interface FilterPanelProps {
   onCategoryChange?: (value: string) => void;
   onLevelChange?: (value: string) => void;
   onStatusChange?: (value: string) => void;
+  onIsFreeChange?: (value: string) => void;
   category?: string;
   level?: string;
   status?: string;
+  isFree?: string;
 }
 
 const categories = [
@@ -28,15 +30,24 @@ const statuses = [
   { value: '', label: 'All Status' },
   { value: 'published', label: 'Published' },
   { value: 'draft', label: 'Draft' },
+  { value: 'on_hold', label: 'On Hold' },
+];
+
+const priceTypes = [
+  { value: '', label: 'All Courses' },
+  { value: 'free', label: 'Free' },
+  { value: 'paid', label: 'Paid' },
 ];
 
 export function FilterPanel({
   onCategoryChange,
   onLevelChange,
   onStatusChange,
+  onIsFreeChange,
   category = '',
   level = '',
   status = '',
+  isFree = '',
 }: FilterPanelProps) {
   return (
     <div className="flex flex-wrap gap-4">
@@ -75,6 +86,19 @@ export function FilterPanel({
         {statuses.map((stat) => (
           <option key={stat.value} value={stat.value}>
             {stat.label}
+          </option>
+        ))}
+      </select>
+
+      {/* Free/Paid Filter */}
+      <select
+        value={isFree}
+        onChange={(e) => onIsFreeChange?.(e.target.value)}
+        className="rounded-lg border border-slate-100 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-slate-50"
+      >
+        {priceTypes.map((price) => (
+          <option key={price.value} value={price.value}>
+            {price.label}
           </option>
         ))}
       </select>

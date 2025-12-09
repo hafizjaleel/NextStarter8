@@ -1,223 +1,207 @@
 'use client';
 
-import { useState } from 'react';
-import { Edit2, Save, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader, AlertCircle } from 'lucide-react';
 
-export function CourseOverview() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    title: 'Advanced React Development',
-    instructor: 'John Smith',
-    category: 'Development',
-    level: 'Advanced',
-    price: '$99.99',
-    description: 'Master React hooks, state management, and performance optimization. This comprehensive course covers everything you need to become a professional React developer. Learn best practices, design patterns, and real-world applications. From beginner fundamentals to advanced techniques, you\'ll gain hands-on experience through practical projects and real-world scenarios.',
-    thumbnail: null as File | null,
-  });
+interface Mentor {
+  id: number | string;
+  name: string;
+  avatar?: string;
+}
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+interface CourseData {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  language?: string;
+  status: 'draft' | 'published' | 'on_hold';
+  thumbnail?: string;
+  isFree: boolean;
+  price?: number;
+  mentors?: Mentor[];
+  modulesCount?: number;
+  lessonsCount?: number;
+}
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, thumbnail: file }));
-    }
-  };
+interface CourseOverviewProps {
+  courseId: string;
+}
 
-  const handleSave = () => {
-    // In a real app, this would send data to an API
-    console.log('Saving course data:', formData);
-    setIsEditing(false);
-  };
+const levelConfig = {
+  beginner: { label: 'Beginner', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  intermediate: { label: 'Intermediate', bg: 'bg-blue-100', text: 'text-blue-700' },
+  advanced: { label: 'Advanced', bg: 'bg-orange-100', text: 'text-orange-700' },
+};
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setFormData({
-      title: 'Advanced React Development',
-      instructor: 'John Smith',
-      category: 'Development',
-      level: 'Advanced',
-      price: '$99.99',
-      description: 'Master React hooks, state management, and performance optimization. This comprehensive course covers everything you need to become a professional React developer. Learn best practices, design patterns, and real-world applications. From beginner fundamentals to advanced techniques, you\'ll gain hands-on experience through practical projects and real-world scenarios.',
-      thumbnail: null,
-    });
-  };
+const statusConfig = {
+  draft: { label: 'Draft', bg: 'bg-slate-100', text: 'text-slate-700' },
+  published: { label: 'Published', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  on_hold: { label: 'On Hold', bg: 'bg-amber-100', text: 'text-amber-700' },
+};
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      Development: 'bg-blue-100 text-blue-700',
-      Design: 'bg-purple-100 text-purple-700',
-      Marketing: 'bg-pink-100 text-pink-700',
-      Business: 'bg-orange-100 text-orange-700',
+const languageNames: Record<string, string> = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  zh: 'Chinese',
+  ja: 'Japanese',
+  pt: 'Portuguese',
+  ru: 'Russian',
+};
+
+export function CourseOverview({ courseId }: CourseOverviewProps) {
+  const [course, setCourse] = useState<CourseData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(`/api/v1/course/admin/${courseId}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch course');
+        }
+
+        const data = await response.json();
+        setCourse(data.data || data);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    return colors[category] || 'bg-blue-100 text-blue-700';
-  };
 
-  const getLevelColor = (level: string) => {
-    const colors: Record<string, string> = {
-      Beginner: 'bg-green-100 text-green-700',
-      Intermediate: 'bg-yellow-100 text-yellow-700',
-      Advanced: 'bg-orange-100 text-orange-700',
-    };
-    return colors[level] || 'bg-orange-100 text-orange-700';
-  };
+    fetchCourse();
+  }, [courseId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader className="h-8 w-8 animate-spin text-emerald-600" strokeWidth={2} />
+      </div>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 flex gap-3">
+        <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
+        <div>
+          <h3 className="text-sm font-semibold text-red-900">Failed to load course</h3>
+          <p className="text-sm text-red-700 mt-1">{error || 'Course not found'}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Thumbnail & Header Card */}
       <div className="rounded-xl border border-slate-100 bg-white overflow-hidden shadow-sm">
         {/* Thumbnail */}
-        <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 relative">
-          {!isEditing ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-sm text-slate-400">Course Thumbnail</span>
-            </div>
+        <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative">
+          {course.thumbnail ? (
+            <img
+              src={course.thumbnail}
+              alt={course.title}
+              className="h-full w-full object-cover"
+            />
           ) : (
-            <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-slate-300 transition bg-slate-200">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleThumbnailChange}
-                className="hidden"
-              />
-              <div className="text-center">
-                <p className="text-sm text-slate-600 font-medium">Click to upload thumbnail</p>
-                {formData.thumbnail && <p className="text-xs text-slate-500 mt-1">{formData.thumbnail.name}</p>}
-              </div>
-            </label>
+            <div className="h-full w-full flex items-center justify-center">
+              <svg
+                className="h-16 w-16 text-slate-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
           )}
         </div>
 
         {/* Header Content */}
-        <div className="p-6">
-          {!isEditing ? (
-            <>
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900 mb-3">{formData.title}</h2>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getCategoryColor(formData.category)}`}>
-                      {formData.category}
-                    </span>
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getLevelColor(formData.level)}`}>
-                      {formData.level}
-                    </span>
+        <div className="p-6 space-y-4">
+          {/* Title */}
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">{course.title}</h2>
+
+            {/* Badges Row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Status Badge */}
+              <span
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusConfig[course.status].bg} ${statusConfig[course.status].text}`}
+              >
+                {statusConfig[course.status].label}
+              </span>
+
+              {/* Level Badge */}
+              <span
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${levelConfig[course.level].bg} ${levelConfig[course.level].text}`}
+              >
+                {levelConfig[course.level].label}
+              </span>
+
+              {/* Category Badge */}
+              {course.category && (
+                <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                  {course.category}
+                </span>
+              )}
+
+              {/* Language Badge */}
+              {course.language && (
+                <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                  {languageNames[course.language] || course.language}
+                </span>
+              )}
+
+              {/* Price Badge */}
+              <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                {course.isFree ? 'Free' : `$${course.price?.toFixed(2)}`}
+              </span>
+            </div>
+          </div>
+
+          {/* Mentors */}
+          {course.mentors && course.mentors.length > 0 && (
+            <div className="border-t border-slate-100 pt-4">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                Instructors ({course.mentors.length})
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {course.mentors.map((mentor) => (
+                  <div
+                    key={mentor.id}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5"
+                  >
+                    <div className="h-5 w-5 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-semibold text-emerald-700 flex-shrink-0">
+                      {mentor.avatar ? (
+                        <img
+                          src={mentor.avatar}
+                          alt={mentor.name}
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        mentor.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-slate-900">{mentor.name}</span>
                   </div>
-                </div>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
-                >
-                  <Edit2 className="h-4 w-4" strokeWidth={2} />
-                  Edit
-                </button>
-              </div>
-
-              {/* Instructor Info */}
-              <div className="pt-4 border-t border-slate-100">
-                <p className="text-sm text-slate-500 mb-1">Instructor</p>
-                <p className="text-sm font-medium text-slate-900">{formData.instructor}</p>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-slate-900 mb-1">
-                  Course Title
-                </label>
-                <input
-                  id="title"
-                  name="title"
-                  type="text"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-slate-900 mb-1">
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                  >
-                    <option>Development</option>
-                    <option>Design</option>
-                    <option>Marketing</option>
-                    <option>Business</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="level" className="block text-sm font-medium text-slate-900 mb-1">
-                    Level
-                  </label>
-                  <select
-                    id="level"
-                    name="level"
-                    value={formData.level}
-                    onChange={handleInputChange}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                  >
-                    <option>Beginner</option>
-                    <option>Intermediate</option>
-                    <option>Advanced</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="instructor" className="block text-sm font-medium text-slate-900 mb-1">
-                  Instructor
-                </label>
-                <input
-                  id="instructor"
-                  name="instructor"
-                  type="text"
-                  value={formData.instructor}
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="price" className="block text-sm font-medium text-slate-900 mb-1">
-                  Price
-                </label>
-                <input
-                  id="price"
-                  name="price"
-                  type="text"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={handleSave}
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700"
-                >
-                  <Save className="h-4 w-4" strokeWidth={2} />
-                  Save Changes
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                >
-                  <X className="h-4 w-4" strokeWidth={2} />
-                  Cancel
-                </button>
+                ))}
               </div>
             </div>
           )}
@@ -225,84 +209,78 @@ export function CourseOverview() {
       </div>
 
       {/* Two Column Layout */}
-      {!isEditing && (
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left Column - Basic Info */}
+        {/* Left Column - Basic Information */}
         <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-bold text-slate-900 mb-4">Basic Information</h3>
           <div className="space-y-4">
-            <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider">Course ID</p>
-              <p className="text-sm font-medium text-slate-900 mt-1">COURSE-001</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider">Category</p>
-              <p className="text-sm font-medium text-slate-900 mt-1">{formData.category}</p>
-            </div>
+            {course.category && (
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider">Category</p>
+                <p className="text-sm font-medium text-slate-900 mt-1">{course.category}</p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-slate-500 uppercase tracking-wider">Level</p>
-              <p className="text-sm font-medium text-slate-900 mt-1">{formData.level}</p>
+              <p className="text-sm font-medium text-slate-900 mt-1">
+                {levelConfig[course.level].label}
+              </p>
             </div>
+            {course.language && (
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider">Language</p>
+                <p className="text-sm font-medium text-slate-900 mt-1">
+                  {languageNames[course.language] || course.language}
+                </p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-slate-500 uppercase tracking-wider">Price</p>
-              <p className="text-sm font-medium text-slate-900 mt-1">{formData.price}</p>
+              <p className="text-sm font-medium text-slate-900 mt-1">
+                {course.isFree ? 'Free' : `$${course.price?.toFixed(2)}`}
+              </p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider">Created Date</p>
-              <p className="text-sm font-medium text-slate-900 mt-1">Jan 15, 2024</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wider">Status</p>
+              <p className="text-sm font-medium text-slate-900 mt-1">
+                {statusConfig[course.status].label}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Right Column - Course Stats */}
+        {/* Right Column - Course Statistics */}
         <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Course Statistics</h3>
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Course Content</h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <p className="text-sm text-slate-600">Total Modules</p>
-              <p className="text-2xl font-bold text-emerald-600">3</p>
-            </div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <p className="text-sm text-slate-600">Total Lessons</p>
-              <p className="text-2xl font-bold text-emerald-600">12</p>
-            </div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <p className="text-sm text-slate-600">Total Students</p>
-              <p className="text-2xl font-bold text-emerald-600">234</p>
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-600">Last Updated</p>
-              <p className="text-sm font-medium text-slate-900">3 days ago</p>
-            </div>
+            {course.modulesCount !== undefined && (
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <p className="text-sm text-slate-600">Total Modules</p>
+                <p className="text-2xl font-bold text-emerald-600">{course.modulesCount}</p>
+              </div>
+            )}
+            {course.lessonsCount !== undefined && (
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <p className="text-sm text-slate-600">Total Lessons</p>
+                <p className="text-2xl font-bold text-emerald-600">{course.lessonsCount}</p>
+              </div>
+            )}
+            {!course.modulesCount && !course.lessonsCount && (
+              <p className="text-sm text-slate-500">No content data available</p>
+            )}
           </div>
         </div>
       </div>
-      )}
 
       {/* Description */}
-      {!isEditing && (
+      {course.description && (
         <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-bold text-slate-900 mb-3">Course Description</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            {formData.description}
+          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+            {course.description}
           </p>
         </div>
       )}
-
-      {isEditing && (
-        <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Course Description</h3>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            rows={5}
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-            placeholder="Enter course description"
-          />
-        </div>
-      )}
-
     </div>
   );
 }

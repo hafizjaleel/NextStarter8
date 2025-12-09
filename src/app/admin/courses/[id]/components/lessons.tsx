@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Video, FileText, Plus, Edit2, Trash2, Lock, HelpCircle } from 'lucide-react';
+import { Video, FileText, Plus, Edit2, Trash2, Lock, HelpCircle, GripVertical } from 'lucide-react';
 import { SidePanel } from '@/components/side-panel';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { QuizForm, type QuizData, type Question } from './quiz-form';
@@ -83,6 +83,8 @@ export function CourseLessons() {
     id: null,
   });
   const [selectedLessonIds, setSelectedLessonIds] = useState<number[]>([]);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     type: 'video',
@@ -274,6 +276,64 @@ export function CourseLessons() {
         maxAttempts: 0,
       },
     });
+  };
+
+  const handleDragStart = (id: number, e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedId(id);
+  };
+
+  const handleDragOver = (id: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverId(id);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverId(null);
+  };
+
+  const handleDrop = (targetId: number, e: React.DragEvent) => {
+    e.preventDefault();
+
+    if (draggedId === null || draggedId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const draggedLesson = lessons.find((l) => l.id === draggedId);
+    const targetLesson = lessons.find((l) => l.id === targetId);
+
+    if (!draggedLesson || !targetLesson) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    // Only allow reordering within the same module
+    if (draggedLesson.module !== targetLesson.module) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const draggedIndex = lessons.findIndex((l) => l.id === draggedId);
+    const targetIndex = lessons.findIndex((l) => l.id === targetId);
+
+    const newLessons = [...lessons];
+    const [movedLesson] = newLessons.splice(draggedIndex, 1);
+    newLessons.splice(targetIndex, 0, movedLesson);
+
+    setLessons(newLessons);
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
   };
 
   return (
@@ -511,24 +571,41 @@ export function CourseLessons() {
                   type="checkbox"
                   checked={allModuleSelected}
                   onChange={() => handleSelectAllInModule(moduleName)}
-                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 transition cursor-pointer"
+                  className="h-4 w-4 rounded border-slate-300 bg-slate-50 text-emerald-600 transition cursor-pointer"
                 />
                 <h3 className="text-base font-bold text-slate-900">{moduleName}</h3>
               </div>
             {moduleLessons.length > 0 ? (
               <div className="space-y-3">
-                {moduleLessons.map((lesson) => (
+                {moduleLessons.map((lesson) => {
+                  const isDragging = draggedId === lesson.id;
+                  const isDropTarget = dragOverId === lesson.id;
+
+                  return (
                   <div
                     key={lesson.id}
-                    className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm hover:shadow-md transition"
+                    draggable
+                    onDragStart={(e) => handleDragStart(lesson.id, e)}
+                    onDragOver={(e) => handleDragOver(lesson.id, e)}
+                    onDragLeave={(e) => handleDragLeave(e)}
+                    onDrop={(e) => handleDrop(lesson.id, e)}
+                    onDragEnd={handleDragEnd}
+                    className={`rounded-xl border bg-white p-4 shadow-sm transition ${
+                      isDragging
+                        ? 'opacity-50 border-slate-200'
+                        : isDropTarget
+                          ? 'border-emerald-300 bg-emerald-50 shadow-md'
+                          : 'border-slate-100 hover:shadow-md'
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
+                        <GripVertical className="h-5 w-5 text-slate-400 flex-shrink-0 cursor-grab active:cursor-grabbing" strokeWidth={2} />
                         <input
                           type="checkbox"
                           checked={selectedLessonIds.includes(lesson.id)}
                           onChange={() => handleSelectLesson(lesson.id)}
-                          className="h-4 w-4 rounded border-slate-300 text-emerald-600 transition cursor-pointer"
+                          className="h-4 w-4 rounded border-slate-300 bg-slate-50 text-emerald-600 transition cursor-pointer"
                         />
                         {lesson.type === 'video' ? (
                           <Video className="h-5 w-5 text-blue-600 flex-shrink-0" strokeWidth={2} />
@@ -599,7 +676,8 @@ export function CourseLessons() {
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
             ) : (
               <p className="text-sm text-slate-500">No lessons in this module yet</p>
