@@ -105,13 +105,21 @@ export function CourseModules() {
         setModules(modules.map((m) => (m.id === editingId ? { ...m, title: formData.title, moduleOrder } : m)));
         setEditingId(null);
       } else {
-        // Add new module
+        // Add new module with reordering if needed
         const newModule = {
           id: Math.max(...modules.map((m) => m.id), 0) + 1,
           title: formData.title,
           moduleOrder,
         };
-        setModules([...modules, newModule]);
+
+        // Reorder existing modules if the new order conflicts
+        const updatedModules = modules.map((m) =>
+          m.moduleOrder >= moduleOrder
+            ? { ...m, moduleOrder: m.moduleOrder + 1 }
+            : m
+        );
+
+        setModules([...updatedModules, newModule]);
       }
       setFormData({ title: '', moduleOrder: '' });
       setIsPanelOpen(false);
