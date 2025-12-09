@@ -75,7 +75,6 @@ export function CourseCard({
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
           <div className="flex gap-4">
-            <span>{episodes} lessons</span>
             <span>{students} students</span>
           </div>
           {updated && <span>{updated}</span>}
