@@ -141,38 +141,6 @@ export function CourseModules() {
                 required
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="lessons" className="block text-sm font-medium text-slate-900 mb-1">
-                  Number of Lessons
-                </label>
-                <input
-                  id="lessons"
-                  name="lessons"
-                  type="number"
-                  value={formData.lessons}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 5"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="duration" className="block text-sm font-medium text-slate-900 mb-1">
-                  Duration
-                </label>
-                <input
-                  id="duration"
-                  name="duration"
-                  type="text"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 2h 30m"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
-              </div>
-            </div>
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
