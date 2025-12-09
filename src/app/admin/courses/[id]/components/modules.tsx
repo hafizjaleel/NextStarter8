@@ -185,7 +185,7 @@ export function CourseModules({ courseId }: CourseModulesProps) {
     return { lessonCount, duration };
   };
 
-  const handleDeleteModule = (id: number) => {
+  const handleDeleteModule = (id: string | number) => {
     setDeleteConfirm({ isOpen: true, id });
   };
 
