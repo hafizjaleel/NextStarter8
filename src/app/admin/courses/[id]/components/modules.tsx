@@ -103,7 +103,7 @@ export function CourseModules({ courseId }: CourseModulesProps) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleEditModule = (id: number) => {
+  const handleEditModule = (id: string | number) => {
     const moduleToEdit = modules.find((m) => m.id === id);
     if (moduleToEdit) {
       setFormData({ title: moduleToEdit.title, moduleOrder: moduleToEdit.moduleOrder.toString() });
