@@ -77,6 +77,7 @@ export function CourseModules() {
   const [dragOverId, setDragOverId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: '',
+    moduleOrder: '',
   });
 
   const handleInputChange = (
