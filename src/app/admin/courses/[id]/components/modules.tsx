@@ -1,24 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronRight, Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
 import { SidePanel } from '@/components/side-panel';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 
-const initialModules = [
-  {
-    id: 1,
-    title: 'Getting Started with React',
-  },
-  {
-    id: 2,
-    title: 'React Hooks Deep Dive',
-  },
-  {
-    id: 3,
-    title: 'State Management',
-  },
-];
+interface Module {
+  id: number | string;
+  title: string;
+  moduleOrder: number;
+}
+
+interface CourseModulesProps {
+  courseId: string;
+}
 
 const initialLessons = [
   { id: 1, title: 'Introduction to React', duration: '15m', module: 'Getting Started with React' },
@@ -61,20 +56,45 @@ const formatDuration = (totalMinutes: number): string => {
   }
 };
 
-export function CourseModules() {
-  const [modules, setModules] = useState(initialModules);
+export function CourseModules({ courseId }: CourseModulesProps) {
+  const [modules, setModules] = useState<Module[]>([]);
   const [lessons] = useState(initialLessons);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: number | null }>({
+  const [editingId, setEditingId] = useState<number | string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: number | string | null }>({
     isOpen: false,
     id: null,
   });
-  const [draggedId, setDraggedId] = useState<number | null>(null);
-  const [dragOverId, setDragOverId] = useState<number | null>(null);
+  const [draggedId, setDraggedId] = useState<number | string | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
+    moduleOrder: '',
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch modules on mount
+  useEffect(() => {
+    const fetchModules = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch(`/api/v1/course/${courseId}/modules`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch modules');
+        }
+        const data = await response.json();
+        setModules(data.modules || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchModules();
+  }, [courseId]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -83,32 +103,74 @@ export function CourseModules() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleEditModule = (id: number) => {
+  const handleEditModule = (id: string | number) => {
     const moduleToEdit = modules.find((m) => m.id === id);
     if (moduleToEdit) {
-      setFormData({ title: moduleToEdit.title });
+      setFormData({ title: moduleToEdit.title, moduleOrder: moduleToEdit.moduleOrder.toString() });
       setEditingId(id);
       setIsPanelOpen(true);
     }
   };
 
-  const handleAddModule = (e: React.FormEvent) => {
+  const handleAddModule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.title) {
-      if (editingId !== null) {
-        // Update existing module
-        setModules(modules.map((m) => (m.id === editingId ? { ...m, title: formData.title } : m)));
-        setEditingId(null);
-      } else {
-        // Add new module
-        const newModule = {
-          id: Math.max(...modules.map((m) => m.id), 0) + 1,
-          title: formData.title,
-        };
-        setModules([...modules, newModule]);
+    const moduleOrder = parseInt(formData.moduleOrder, 10);
+    if (formData.title && !isNaN(moduleOrder) && moduleOrder > 0) {
+      try {
+        if (editingId !== null) {
+          // Update existing module
+          const response = await fetch(`/api/v1/course/module/update/${editingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: formData.title,
+              moduleOrder,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update module');
+          }
+
+          setModules(modules.map((m) => (m.id === editingId ? { ...m, title: formData.title, moduleOrder } : m)));
+          setEditingId(null);
+        } else {
+          // Create new module with reordering if needed
+          const response = await fetch('/api/v1/course/module/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: formData.title,
+              courseId,
+              moduleOrder,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to create module');
+          }
+
+          const data = await response.json();
+          const newModule = data.module || {
+            id: Math.max(...modules.map((m) => (typeof m.id === 'number' ? m.id : 0)), 0) + 1,
+            title: formData.title,
+            moduleOrder,
+          };
+
+          // Reorder existing modules if the new order conflicts
+          const updatedModules = modules.map((m) =>
+            m.moduleOrder >= moduleOrder
+              ? { ...m, moduleOrder: m.moduleOrder + 1 }
+              : m
+          );
+
+          setModules([...updatedModules, newModule]);
+        }
+        setFormData({ title: '', moduleOrder: '' });
+        setIsPanelOpen(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       }
-      setFormData({ title: '' });
-      setIsPanelOpen(false);
     }
   };
 
@@ -123,29 +185,41 @@ export function CourseModules() {
     return { lessonCount, duration };
   };
 
-  const handleDeleteModule = (id: number) => {
+  const handleDeleteModule = (id: string | number) => {
     setDeleteConfirm({ isOpen: true, id });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteConfirm.id !== null) {
-      setModules(modules.filter((m) => m.id !== deleteConfirm.id));
-      setDeleteConfirm({ isOpen: false, id: null });
+      try {
+        const response = await fetch(`/api/v1/course/module/delete/${deleteConfirm.id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete module');
+        }
+
+        setModules(modules.filter((m) => m.id !== deleteConfirm.id));
+        setDeleteConfirm({ isOpen: false, id: null });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      }
     }
   };
 
   const handleClosePanel = () => {
     setIsPanelOpen(false);
     setEditingId(null);
-    setFormData({ title: '' });
+    setFormData({ title: '', moduleOrder: '' });
   };
 
-  const handleDragStart = (id: number, e: React.DragEvent) => {
+  const handleDragStart = (id: string | number, e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = 'move';
     setDraggedId(id);
   };
 
-  const handleDragOver = (id: number, e: React.DragEvent) => {
+  const handleDragOver = (id: string | number, e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverId(id);
@@ -156,7 +230,7 @@ export function CourseModules() {
     setDragOverId(null);
   };
 
-  const handleDrop = (targetId: number, e: React.DragEvent) => {
+  const handleDrop = async (targetId: string | number, e: React.DragEvent) => {
     e.preventDefault();
 
     if (draggedId === null || draggedId === targetId) {
@@ -172,9 +246,28 @@ export function CourseModules() {
     const [draggedModule] = newModules.splice(draggedIndex, 1);
     newModules.splice(targetIndex, 0, draggedModule);
 
-    setModules(newModules);
+    // Update moduleOrder to reflect new positions
+    const modulesWithUpdatedOrder = newModules.map((module, index) => ({
+      ...module,
+      moduleOrder: index + 1,
+    }));
+
+    setModules(modulesWithUpdatedOrder);
     setDraggedId(null);
     setDragOverId(null);
+
+    // Send reorder updates to API
+    try {
+      for (const module of modulesWithUpdatedOrder) {
+        await fetch(`/api/v1/course/module/update/${module.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ moduleOrder: module.moduleOrder }),
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update module order');
+    }
   };
 
   const handleDragEnd = () => {
@@ -182,13 +275,29 @@ export function CourseModules() {
     setDragOverId(null);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-slate-600">Loading modules...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
       <div className="flex justify-end">
         <button
           onClick={() => {
             setEditingId(null);
-            setFormData({ title: '' });
+            const nextOrder = modules.length > 0 ? Math.max(...modules.map((m) => m.moduleOrder)) + 1 : 1;
+            setFormData({ title: '', moduleOrder: nextOrder.toString() });
             setIsPanelOpen(true);
           }}
           className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700"
@@ -219,6 +328,22 @@ export function CourseModules() {
               required
             />
           </div>
+          <div>
+            <label htmlFor="moduleOrder" className="block text-sm font-medium text-slate-900 mb-1">
+              Module Order
+            </label>
+            <input
+              id="moduleOrder"
+              name="moduleOrder"
+              type="number"
+              min="1"
+              value={formData.moduleOrder}
+              onChange={handleInputChange}
+              placeholder="e.g., 1"
+              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              required
+            />
+          </div>
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
@@ -238,7 +363,7 @@ export function CourseModules() {
       </SidePanel>
 
       <div className="space-y-3">
-        {modules.map((module) => {
+        {[...modules].sort((a, b) => a.moduleOrder - b.moduleOrder).map((module) => {
           const { lessonCount, duration } = getModuleStats(module.title);
           const isDragging = draggedId === module.id;
           const isDropTarget = dragOverId === module.id;
@@ -264,7 +389,12 @@ export function CourseModules() {
                 <div className="flex items-center gap-3 flex-1">
                   <GripVertical className="h-5 w-5 text-slate-400 flex-shrink-0 cursor-grab active:cursor-grabbing" strokeWidth={2} />
                   <div className="flex-1">
-                    <h4 className="text-base font-bold text-slate-900">{module.title}</h4>
+                    <div className="flex items-center gap-3">
+                      <h4 className="text-base font-bold text-slate-900">{module.title}</h4>
+                      <span className="inline-block rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                        #{module.moduleOrder}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
                       <span>{lessonCount} lesson{lessonCount !== 1 ? 's' : ''}</span>
                       <span>{duration}</span>

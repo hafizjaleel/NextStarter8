@@ -27,12 +27,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     {
       label: 'Modules',
       value: 'modules',
-      content: <CourseModules />,
+      content: <CourseModules courseId={id} />,
     },
     {
       label: 'Lessons',
       value: 'lessons',
-      content: <CourseLessons />,
+      content: <CourseLessons courseId={id} />,
     },
     {
       label: 'Analytics',
