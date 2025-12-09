@@ -365,12 +365,21 @@ export function CourseLessons() {
           return (
             <div key={moduleName}>
               <div className="mb-3 flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={allModuleSelected}
-                  onChange={() => handleSelectAllInModule(moduleName)}
-                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 transition cursor-pointer"
-                />
+                <button
+                  onClick={() => handleSelectAllInModule(moduleName)}
+                  className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${
+                    allModuleSelected
+                      ? 'bg-emerald-600'
+                      : 'bg-slate-200'
+                  }`}
+                  aria-label={`Toggle selection for all lessons in ${moduleName}`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                      allModuleSelected ? 'translate-x-5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
                 <h3 className="text-base font-bold text-slate-900">{moduleName}</h3>
               </div>
             {moduleLessons.length > 0 ? (
